@@ -26,7 +26,7 @@ flags.DEFINE_integer('runs_per_object', 1, 'How many runs should the script run 
 FLAGS = flags.FLAGS
 
 
-def aspect_ratio_distortion(image_info: ImageContainer, image_path, output_dir):
+def aspect_ratio_distortion(image_info: ImageContainer, image_path, output_dir, counter):
     # Config loading
     runs_per_object = FLAGS.runs_per_object
 
@@ -96,27 +96,22 @@ def aspect_ratio_distortion(image_info: ImageContainer, image_path, output_dir):
             image_c.paste(image_right_rect, box=right_rect_pos)
             image_c.paste(image_bottom_rect, box=bottom_rect_pos)
 
-            # Updating Image metadata
             object_c = image_info_c.find_matching_object(object=object)
             object_c.xmax = object_c.xmin + new_width
             object_c.ymax = object_c.ymin + new_height
             object_c.recalculate_size()
 
+            # Updating Image metadata
+            filename = image_info_c.filename
+            filename = os.path.splitext(filename)
+            new_filename = filename[0] + '_ARD_' + str(object_counter) + '_R' + str(run)
+            new_filename = new_filename + filename[1]
+            image_info_c.filename = new_filename
+
             # Saving
-            pass
-
-            # DEBUG
-            import numpy as np
-
-            npArr = np.array([[object_c.ymin / image_info_c.height, object_c.xmin / image_info_c.width, object_c.ymax / image_info_c.height, object_c.xmax / image_info_c.width],
-                                 [right_rect.ymin / image_info_c.height, right_rect.xmin / image_info_c.width, right_rect.ymax / image_info_c.height, right_rect.xmax / image_info_c.width],
-                                 [bottom_rect.ymin / image_info_c.height, bottom_rect.xmin / image_info_c.width, bottom_rect.ymax / image_info_c.height, bottom_rect.xmax / image_info_c.width]
-                                 ])
-            VSU.draw_bounding_boxes_on_image(image=image_c,
-                                             boxes=npArr
-                                             )
-            image_c.show()
-            print('Run:', run,'X mult:', x_ratio_multiplier, 'Y mult:', y_ratio_multiplier)
+            print('Saving image', str(counter) + '-' + str(object_counter), 'run', run)
+            aug_utils.save(image_c, image_info_c, output_dir)
+            print('Image', image_info_c.filename, 'saved.')
         object_counter += 1
 
 
@@ -137,9 +132,9 @@ def main(_):
                 warnings.warn('Linked Image not found! Skipping...', UserWarning)
                 continue
 
-            print('Image No: ', image_num)
+            print('Starting processing on image', image_num)
             image_num += 1
-            aspect_ratio_distortion(image_info=image_info, image_path=image_path, output_dir=out_dir)
+            aspect_ratio_distortion(image_info=image_info, image_path=image_path, output_dir=out_dir, counter=image_num)
 
 
 if __name__ == '__main__':
